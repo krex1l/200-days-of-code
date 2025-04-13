@@ -1,0 +1,86 @@
+import time
+import matplotlib.pyplot as plt
+import math
+
+# --- Function to check if a number is prime ---
+def is_prime(n):
+    """
+    Efficiently checks if a number is prime.
+    Also counts how many checks (steps) it took.
+    """
+    steps = 0
+    if n <= 1:
+        return False, 1  # 1 step to return this
+    if n <= 3:
+        return True, 1  # Small primes
+
+    if n % 2 == 0 or n % 3 == 0:
+        return False, 2  # Not prime if divisible by 2 or 3
+
+    # Now we check numbers like 6k ± 1
+    i = 5
+    while i * i <= n:
+        steps += 1
+        if n % i == 0 or n % (i + 2) == 0:
+            return False, steps
+        i += 6
+
+    return True, steps if steps > 0 else 1
+
+
+# --- Benchmarking and Plotting ---
+def benchmark_is_prime():
+    digit_counts = list(range(1, 8))  # We'll test up to 7-digit numbers (higher = slow)
+    steps_list = []
+    time_list = []
+
+    for digits in digit_counts:
+        test_num = 10 ** digits - 1  # Biggest number for that many digits
+        start = time.perf_counter()
+        _, steps = is_prime(test_num)
+        end = time.perf_counter()
+
+        steps_list.append(steps)
+        time_list.append(end - start)
+
+    # --- Graph 1: Steps vs Digits ---
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot(digit_counts, steps_list, marker='o', color='purple')
+    plt.title("Steps to Test Primality")
+    plt.xlabel("Number of Digits")
+    plt.ylabel("Steps (Loops)")
+    plt.grid(True)
+
+    # --- Graph 2: Time vs Digits ---
+    plt.subplot(1, 2, 2)
+    plt.plot(digit_counts, time_list, marker='o', color='orange', label="Python Time")
+
+    # Again, we estimate how fast C might be
+    c_times = [t / 10 for t in time_list]  # Assuming C is 10x faster
+    plt.plot(digit_counts, c_times, marker='x', linestyle='--', color='red', label="C Time (estimated)")
+
+    plt.title("Time to Test Primality")
+    plt.xlabel("Number of Digits")
+    plt.ylabel("Time (seconds)")
+    plt.legend()
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+
+# --- Function to sum all primes from 3 to 1000 ---
+def sum_primes():
+    total = 0
+    for num in range(3, 1001):
+        prime, _ = is_prime(num)
+        if prime:
+            total += num
+    print(f"Sum of all primes between 3 and 1000 is: {total}")
+
+
+# --- Run Everything ---
+if __name__ == "__main__":
+    benchmark_is_prime()
+    sum_primes()
