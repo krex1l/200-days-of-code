@@ -1,0 +1,85 @@
+import time
+import matplotlib.pyplot as plt
+import math
+
+# --- Function to find cube root ---
+def cube_root(n):
+    """
+    Finds the integer cube root of any number using binary search.
+    Also returns how many steps it took.
+    Works even if the number is negative.
+    """
+    if n == 0:
+        return 0, 1  # Cube root of 0 is just 0, only 1 step needed
+
+    steps = 0  # We'll count how many times we loop
+    negative = n < 0  # Check if number is negative
+    n = abs(n)  # If it is, make it positive so math is easier
+
+    low = 0
+    high = n  # Start search from 0 to the number
+
+    while low <= high:
+        steps += 1  # Count each loop as a step
+        mid = (low + high) // 2  # This is like the middle of our search space
+        mid_cubed = mid * mid * mid  # Find the cube of mid
+
+        if mid_cubed == n:
+            # Perfect cube root
+            return -mid if negative else mid, steps
+        elif mid_cubed < n:
+            # We’re too low, so move the bottom up
+            low = mid + 1
+        else:
+            # We went too high, so move the top down
+            high = mid - 1
+
+    # If it's not a perfect cube, return the closest lower value
+    return -high if negative else high, steps
+
+
+# --- Benchmarking and Plotting ---
+def benchmark_cube_root():
+    digit_counts = list(range(1, 11))  # We'll test numbers from 1 digit to 10 digits
+    steps_list = []  # This will store how many steps each test took
+    time_list = []   # This will store how long each test took
+
+    for digits in digit_counts:
+        test_num = 10 ** digits - 1  # Like 9, 99, 999..., biggest number for that many digits
+        start = time.perf_counter()  # Start the timer
+        _, steps = cube_root(test_num)  # Run the cube root finder
+        end = time.perf_counter()  # Stop the timer
+        
+        steps_list.append(steps)  # Save how many steps it took
+        time_list.append(end - start)  # Save how much time it took
+
+    # --- Graph 1: Steps vs. Digits ---
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot(digit_counts, steps_list, marker='o', color='blue')
+    plt.title("Steps to Compute Cube Root")
+    plt.xlabel("Number of Digits")
+    plt.ylabel("Steps (Loops)")
+    plt.grid(True)
+
+    # --- Graph 2: Time vs. Digits ---
+    plt.subplot(1, 2, 2)
+    plt.plot(digit_counts, time_list, marker='o', color='green', label="Python Time")
+
+    # Let's pretend C is faster and estimate it here (you’d actually get real values by writing it in C)
+    c_times = [t / 10 for t in time_list]  # Just guessing C is 10x faster
+    plt.plot(digit_counts, c_times, marker='x', linestyle='--', color='red', label="C Time (estimated)")
+
+    plt.title("Time to Compute Cube Root")
+    plt.xlabel("Number of Digits")
+    plt.ylabel("Time (in seconds)")
+    plt.legend()
+    plt.grid(True)
+
+    plt.tight_layout()
+    plt.show()
+
+
+# --- Run Everything ---
+if __name__ == "__main__":
+    benchmark_cube_root()
