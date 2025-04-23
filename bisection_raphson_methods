@@ -1,0 +1,59 @@
+def compare_methods(f, df, a, b, x0, tol=1e-6, max_iter=100):
+    def bisection_method(f, a, b, tol, max_iter):
+        steps = 0
+        if f(a) * f(b) >= 0:
+            raise ValueError("Function must have opposite signs at a and b.")
+        
+        while (b - a) / 2.0 > tol and steps < max_iter:
+            c = (a + b) / 2.0
+            if abs(f(c)) < tol:
+                return c, steps
+            if f(a) * f(c) < 0:
+                b = c
+            else:
+                a = c
+            steps += 1
+        return (a + b) / 2.0, steps
+
+    def newton_raphson_method(f, df, x0, tol, max_iter):
+        x = x0
+        steps = 0
+        for _ in range(max_iter):
+            fx = f(x)
+            dfx = df(x)
+            if abs(fx) < tol:
+                return x, steps
+            if dfx == 0:
+                raise ZeroDivisionError("Derivative zero encountered.")
+            x -= fx / dfx
+            steps += 1
+        return x, steps
+
+    try:
+        root_bisect, steps_bisect = bisection_method(f, a, b, tol, max_iter)
+    except Exception as e:
+        root_bisect, steps_bisect = None, str(e)
+
+    try:
+        root_newton, steps_newton = newton_raphson_method(f, df, x0, tol, max_iter)
+    except Exception as e:
+        root_newton, steps_newton = None, str(e)
+
+    print("=== Comparison Results ===")
+    print(f"Bisection Method:")
+    print(f"  Root found     = {root_bisect}")
+    print(f"  Steps taken    = {steps_bisect}\n")
+
+    print(f"Newton-Raphson Method:")
+    print(f"  Root found     = {root_newton}")
+    print(f"  Steps taken    = {steps_newton}")
+
+# Example function and derivative
+def f(x):
+    return x**3 - x - 2
+
+def df(x):
+    return 3*x**2 - 1
+
+# Run the comparison
+compare_methods(f, df, a=1, b=2, x0=1.5)
