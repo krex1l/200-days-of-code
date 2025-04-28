@@ -1,83 +1,102 @@
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider, Button
 
-class EquipmentFinancing:
-    def __init__(self, amount, rate, months):
-        self._amount = amount
-        self._rate = rate / 12  # Monthly rate
-        self._months = months
-        self._paid = [0]  # Payments made
-        self._outstanding = [amount]  # Outstanding balance
-        self._legend = None
-        
-    def make_payment(self):
-        payment = self._outstanding[-1] * self._rate / (1 - (1 + self._rate)**(-self._months + len(self._paid) - 1))
-        self._paid.append(payment)
-        principal = payment - self._outstanding[-1] * self._rate
-        self._outstanding.append(self._outstanding[-1] - principal)
-        
-    def get_outstanding(self):
-        return self._outstanding
-        
-    def get_legend(self):
-        return self._legend
-
-class FixedRateFinancing(EquipmentFinancing):
-    def __init__(self, amount, rate, months):
-        super().__init__(amount, rate, months)
-        self._legend = f'Fixed, {rate*100:.1f}%'
-
-class PointsFinancing(EquipmentFinancing):
-    def __init__(self, amount, rate, months, points):
-        super().__init__(amount, rate, months)
-        self._points = points
-        self._paid = [amount * (points/100)]
-        self._outstanding = [amount - self._paid[0]]
-        self._legend = f'Fixed, {rate*100:.1f}%, {points} points'
-
-class TeaserRateFinancing(EquipmentFinancing):
-    def __init__(self, amount, rate, months, teaser_rate, teaser_months):
-        super().__init__(amount, teaser_rate, months)
-        self._teaser_months = teaser_months
-        self._teaser_rate = teaser_rate
-        self._next_rate = rate / 12
-        self._legend = f'{teaser_rate*100:.1f}% for {teaser_months} months, then {rate*100:.1f}%'
-        
-    def make_payment(self):
-        if len(self._paid) == self._teaser_months + 1:
-            self._rate = self._next_rate
-            # Recalculate payment for remaining term
-            remaining_months = self._months - self._teaser_months
-            outstanding = self._outstanding[-1]
-            self._paid[-1] = outstanding * self._rate / (1 - (1 + self._rate)**(-remaining_months))
-        super().make_payment()
-
-def compare_financing(amt, years, fixed_rate, pts, pts_rate, var_rate1, var_rate2, var_months):
-    total_months = years * 12
-    fixed1 = FixedRateFinancing(amt, fixed_rate, total_months)
-    fixed2 = PointsFinancing(amt, pts_rate, total_months, pts)
-    two_rate = TeaserRateFinancing(amt, var_rate2, total_months, var_rate1, var_months)
-    financing_options = [fixed1, fixed2, two_rate]
+def covid_simulation(fixed_params, variable_params):
+    infected = [fixed_params['initial_infections']]
+    new_infections = [fixed_params['initial_infections']]
+    total_infections = fixed_params['initial_infections']
     
-    for m in range(total_months):
-        for option in financing_options:
-            option.make_payment()
+    for t in range(fixed_params['duration']):
+        cur_infections = infected[-1]
+        
+        # Remove people no longer contagious
+        if len(new_infections) > fixed_params['days_spreading']:
+            cur_infections -= new_infections[-fixed_params['days_spreading']-1]
+        
+        # Check if social distancing is in effect
+        if (t >= variable_params['lockdown_start'] and 
+            t < variable_params['lockdown_end']):
+            daily_contacts = variable_params['lockdown_contacts']
+        else:
+            daily_contacts = fixed_params['normal_contacts']
+        
+        # Compute new cases
+        total_contacts = cur_infections * daily_contacts
+        susceptible = fixed_params['population'] - total_infections
+        risky_contacts = total_contacts * (susceptible/fixed_params['population'])
+        newly_infected = round(risky_contacts * fixed_params['contagiousness'])
+        
+        # Update variables
+        new_infections.append(newly_infected)
+        total_infections += newly_infected
+        infected.append(cur_infections + newly_infected)
     
-    plot_financing(financing_options, amt)
+    return infected
 
-def plot_financing(options, amt):
-    plt.figure(figsize=(10, 6))
-    for option in options:
-        outstanding = option.get_outstanding()
-        plt.plot(outstanding, label=option.get_legend())
+# Fixed parameters
+fixed_params = {
+    'population': 330_000_000,  # US population
+    'initial_infections': 10_000,
+    'duration': 365,  # 1 year
+    'days_spreading': 14,  # Infectious period
+    'normal_contacts': 15,  # Daily contacts without social distancing
+    'contagiousness': 0.05  # Probability of transmission per contact
+}
+
+# Initial variable parameters
+variable_params = {
+    'lockdown_start': 30,
+    'lockdown_end': 120,
+    'lockdown_contacts': 5
+}
+
+# Create figure and axis
+fig, ax = plt.subplots(figsize=(12, 8))
+plt.subplots_adjust(bottom=0.3)
+
+# Initial simulation
+infected = covid_simulation(fixed_params, variable_params)
+line, = ax.plot(infected, lw=2)
+ax.set_title('COVID-19 Spread Simulation in USA')
+ax.set_xlabel('Days')
+ax.set_ylabel('Active Infections')
+ax.grid(True)
+
+# Add sliders
+axcolor = 'lightgoldenrodyellow'
+ax_lockdown_start = plt.axes([0.2, 0.2, 0.65, 0.03], facecolor=axcolor)
+ax_lockdown_end = plt.axes([0.2, 0.15, 0.65, 0.03], facecolor=axcolor)
+ax_lockdown_contacts = plt.axes([0.2, 0.1, 0.65, 0.03], facecolor=axcolor)
+
+s_lockdown_start = Slider(ax_lockdown_start, 'Lockdown Start', 0, 180, valinit=30)
+s_lockdown_end = Slider(ax_lockdown_end, 'Lockdown End', 30, 365, valinit=120)
+s_lockdown_contacts = Slider(ax_lockdown_contacts, 'Contacts During Lockdown', 1, 15, valinit=5)
+
+# Update function for sliders
+def update(val):
+    variable_params['lockdown_start'] = int(s_lockdown_start.val)
+    variable_params['lockdown_end'] = int(s_lockdown_end.val)
+    variable_params['lockdown_contacts'] = s_lockdown_contacts.val
     
-    plt.title('Equipment Financing Options Comparison')
-    plt.xlabel('Months')
-    plt.ylabel('Outstanding Balance ($)')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+    infected = covid_simulation(fixed_params, variable_params)
+    line.set_ydata(infected)
+    ax.set_ylim(0, max(infected)*1.1)
+    fig.canvas.draw_idle()
 
-# Example usage
-compare_financing(amt=100000, years=5, fixed_rate=0.06, pts=2, pts_rate=0.055, 
-                 var_rate1=0.04, var_rate2=0.065, var_months=12)
+s_lockdown_start.on_changed(update)
+s_lockdown_end.on_changed(update)
+s_lockdown_contacts.on_changed(update)
+
+# Add reset button
+resetax = plt.axes([0.8, 0.025, 0.1, 0.04])
+button = Button(resetax, 'Reset', color=axcolor, hovercolor='0.975')
+
+def reset(event):
+    s_lockdown_start.reset()
+    s_lockdown_end.reset()
+    s_lockdown_contacts.reset()
+
+button.on_clicked(reset)
+
+plt.show()
