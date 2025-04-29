@@ -1,0 +1,50 @@
+# Sample smart meter readings (in kWh)
+readings = ["245.6", "247.8", "249.0", "250.2", "252.1", "253.9", "255.0"]
+
+# --- Writing to the file ---
+# 1. open(fn, 'w') - create a file for writing
+with open("smart_meter_data.txt", "w") as fh:
+    # 2. fh.writelines(S) - write each reading on a separate line
+    lines = [reading + "\n" for reading in readings]
+    fh.writelines(lines)
+# File is automatically closed with `with` block
+
+# --- Reading entire content ---
+# 3. open(fn, 'r') - open file for reading
+fh = open("smart_meter_data.txt", "r")
+
+# 4. fh.read() - read entire content as a single string
+content = fh.read()
+print("Full content with read():")
+print(content)
+
+fh.close()  # 5. fh.close() - close the file
+
+# --- Reading line by line ---
+fh = open("smart_meter_data.txt", "r")
+
+# 6. fh.readline() - read the next line
+print("First line with readline():")
+print(fh.readline().strip())
+
+fh.close()
+
+# --- Reading all lines as a list ---
+fh = open("smart_meter_data.txt", "r")
+
+# 7. fh.readlines() - get list of all lines
+all_lines = fh.readlines()
+print("All lines with readlines():")
+print([line.strip() for line in all_lines])
+
+fh.close()
+
+# --- Appending more readings ---
+# 8. open(fn, 'a') - open file for appending
+with open("smart_meter_data.txt", "a") as fh:
+    fh.write("256.3\n")  # 9. fh.write(s) - write string to file
+
+# --- Final read to confirm append ---
+with open("smart_meter_data.txt", "r") as fh:
+    print("Final content after appending:")
+    print(fh.read())
